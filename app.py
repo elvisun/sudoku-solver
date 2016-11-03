@@ -3,7 +3,7 @@ from Queue import PriorityQueue
 
 def printBoard(m):
 	line = '-------------------------'
-	
+	print''
 	for y, row in enumerate(m):
 		s = ''
 		if y % 3 == 0:
@@ -19,67 +19,50 @@ def printBoard(m):
 		print s
 	print line
 
-def solve(m):
-	d = {}
-	count = 9*9
-	for y, row in enumerate(m):
-		for x, ele in enumerate(row):
-			if not ele:
-				d[(x,y)] = getPoss(x,y,m)
-				count = count - 1
-	return bts(0,0,count,m,d)
 
-
-def bts(x, y, count, m, oldDict):
-	d = dict(oldDict)
+def bts(x, y, count, m, row_remain, col_remain, sqr_remain):
+	#printBoard(m)
 	if count == 0:
-		return 1
+		return m
 	while m[y][x] != 0:
 		if x == 8:
 			y = y + 1
 			x = 0
 		else:
 			x = x + 1
-	a = getPoss(x, y, m)
-	for choice in a:
-		m[y][x] = choice
-		for child in getArcs(x,y,m):
-			if choice in d[child]:
-				d[child].remove(choice)
-		if bts(x, y, count - 1, m, d):
-			return 1
-		else:
-			for child in getArcs(x,y,m):
-				d[child].append(choice)
-			m[y][x] = 0
+	available = row_remain[y] & col_remain[x] & sqr_remain[y/3*3+x/3]
+	for choice in available:
+		m[y][x] = str(choice)
+		row_remain[y].discard(choice)
+		col_remain[x].discard(choice)
+		sqr_remain[y/3*3+x/3].discard(choice)
+		if bts(x, y, count - 1, m, row_remain, col_remain, sqr_remain):
+			return m
+		row_remain[y].add(choice)
+		col_remain[x].add(choice)
+		sqr_remain[y/3*3+x/3].add(choice)
+		m[y][x] = 0
 	return 0
 
 
-def getPoss(x,y,m):		#get all possible moves
-	if m[y][x]:
-		return []
-	d = {1,2,3,4,5,6,7,8,9}
-	for i in range(0,9):
-		if m[y][i] in d:
-			d.remove(m[y][i])
-		if m[i][x] in d:
-			d.remove(m[i][x])
-	for i in range(0,3):
-		for j in range(0,3):
-			if m[y/3*3+i][x/3*3+j] in d:
-				d.remove(m[y/3*3+i][x/3*3+j])
-	return list(d)
+def getPoss(m):		#get all possible moves
+    row_remain = [set(xrange(1,10)) for _ in xrange(9)]
+    col_remain = [set(xrange(1,10)) for _ in xrange(9)]
+    sqr_remain = [set(xrange(1,10)) for _ in xrange(9)]
+    # Find available remaining choices
+    count = 0
+    for i in xrange(9):
+        for j in xrange(9):
+            if m[i][j] != 0:
+                val = int(m[i][j])
+                row_remain[i].discard(val)
+                col_remain[j].discard(val)
+                sqr_remain[i/3*3+j/3].discard(val)
+            else:
+                count = count + 1
+    #print count
+    return (row_remain,col_remain,sqr_remain, count)
 
-def getArcs(x,y,m):		#get all arcs
-	ret = []
-	for i in range(0,9):
-		ret.append((i,y))
-		ret.append((x,i))
-	for i in range(0,3):
-		for j in range(0,3):
-			ret.append((x/3*3+j,y/3*3+i))
-	ret = [p for p in ret if p!=(x,y)]	#list comprehension to remove (x,y)
-	return ret
 
 def main():
 	m = [
@@ -94,8 +77,9 @@ def main():
 	[0,0,0,6,0,7,0,0,0],
 	]
 	printBoard(m)
-	solve(m)
-	#print getSucessors(3,4,m)
+	row_remain, col_remain, sqr_remain, count = getPoss(m)
+	solved = bts(0, 0, count, m, row_remain, col_remain, sqr_remain)
+	printBoard(solved)
 
 if __name__ == '__main__':
 	main()
